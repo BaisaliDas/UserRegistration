@@ -1,21 +1,24 @@
+{%extends 'dummy.html'%}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registration Page</title>
+    {% block title %}
+        <title>Registration Page</title>
+    {% endblock %}
 </head>
 <body>
-   <h1>Fill the form and Register</h1>
-   <center>
-    <form method="POST" enctype="multipart/form-data">
-        {% csrf_token %}
-        {{UFDO.as_p}}
-        {{PFDO.as_p}}
-    
-        <input type="submit" value="Register" class="btn btn-primary">
-    </form>
-   </center> 
-   
+    {% block body_block %}
+        <h1>Fill the form and Register</h1>
+        <center>
+            <form method="POST" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{UFDO.as_p}}
+                {{PFDO.as_p}}
+                <input type="submit" value="Register" class="btn btn-primary">
+            </form>
+        </center> 
+   {% endblock %}
 </body>
 </html>

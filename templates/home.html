@@ -1,11 +1,17 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-</head>
-<body>
+
+{% extends 'dummy.html' %}
+
+{% block title %}
+    <title>Home Pahe</title>
+{% endblock %}
+
+{% block body_block %}
+<center>
+    {% if username %}
+        <h1>Welcome To hOmE page MS{{username}} </h1>
+    {% else %}
+        <h1>Welcome to HomE</h1>
+    {% endif %}
     
-</body>
-</html>
+</center>
+{% endblock %}
