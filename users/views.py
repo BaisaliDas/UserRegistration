@@ -4,11 +4,11 @@ from django.http import HttpResponse,HttpResponseRedirect
 # Create your views here.
 from users.forms import *
 from django.core.mail import send_mail
-from django.contrib.auth import authenticate,login
+from django.contrib.auth import authenticate,login,logout
 
 from django.urls import reverse
 
-
+from django.contrib.auth.decorators import login_required
 
 
 def registration(request):
@@ -68,3 +68,18 @@ def user_login(request):
         else:
             return HttpResponse('Invalid Credentials')
     return render(request,'userLogin.html')
+
+#user logout
+@login_required
+def user_logout(request):
+    logout(request)
+    return HttpResponseRedirect(reverse('home'))
+
+#user details display
+@login_required
+def display_uDetails(request):
+    username=request.session['username']
+    UO=User.objects.get(username=username)
+    PO=Profile.objects.get(username=UO)
+    d={'UO':UO,'PO':PO}
+    return render(request,'display_data.html',d)
