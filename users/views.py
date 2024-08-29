@@ -1,4 +1,4 @@
-from django.shortcuts import render
+from django.shortcuts import render , redirect
 from django.http import HttpResponse,HttpResponseRedirect
 
 # Create your views here.
@@ -9,6 +9,11 @@ from django.contrib.auth import authenticate,login,logout
 from django.urls import reverse
 
 from django.contrib.auth.decorators import login_required
+
+from django.conf import settings
+import random
+from users.models import *
+from django.utils.crypto import get_random_string
 
 
 def registration(request):
@@ -68,6 +73,8 @@ def user_login(request):
         else:
             return HttpResponse('Invalid Credentials')
     return render(request,'userLogin.html')
+print("Profile model:", Profile.__name__)
+print("Profile model class:", Profile.__class__.__name__)
 
 #user logout
 @login_required
@@ -83,3 +90,42 @@ def display_uDetails(request):
     PO=Profile.objects.get(username=UO)
     d={'UO':UO,'PO':PO}
     return render(request,'display_data.html',d)
+
+
+
+
+#change password
+
+@login_required
+def change_password(request):
+    # user = request.user
+    if request.method=='POST':
+        cp=request.POST['cp']  # cp: change password
+       
+
+        username=request.session['username']
+        UO=User.objects.get(username=username)
+        UO.set_password(cp)
+        UO.save()
+
+            
+        return HttpResponse('password is changed')
+        
+    return render(request,'change_password.html')
+
+#reset password
+
+def reset_pw(request):
+    if request.method=='POST':
+        pw=request.POST['pw']
+        username=request.POST['un']
+        LUO=User.objects.filter(username=username)
+        if LUO:
+            UO=LUO[0]
+            UO.set_password(pw)
+            UO.save()
+            return HttpResponse('Rest password is done successfully')
+        else:
+            return HttpResponse('User is not present')
+    return render(request,'reset_pw.html')
+
