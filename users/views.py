@@ -10,10 +10,12 @@ from django.urls import reverse
 
 from django.contrib.auth.decorators import login_required
 
-from django.conf import settings
+from django.core.cache import cache
 import random
 from users.models import *
-from django.utils.crypto import get_random_string
+# from django.utils.crypto import get_random_string
+# from django.contrib.auth.hashers import make_password
+
 
 
 def registration(request):
@@ -91,41 +93,111 @@ def display_uDetails(request):
     d={'UO':UO,'PO':PO}
     return render(request,'display_data.html',d)
 
-
-
-
 #change password
 
 @login_required
 def change_password(request):
     # user = request.user
-    if request.method=='POST':
-        cp=request.POST['cp']  # cp: change password
-       
-
-        username=request.session['username']
-        UO=User.objects.get(username=username)
-        UO.set_password(cp)
-        UO.save()
-
-            
-        return HttpResponse('password is changed')
+    
+    username = request.session.get('username')
+    UO = User.objects.get(username=username)
         
+    if request.method=='POST':
+            cp=request.POST['cp']  # cp: change password
+            otp_entered = request.POST['otp']  # Fetch the entered OTP
+
+            # Retrieve the OTP stored in the cache
+            otp_stored = cache.get(f'{username}_otp')
+        
+            if otp_stored and str(otp_stored) == otp_entered:
+                UO.set_password(cp)
+                UO.save()
+                #clear OTP from cache
+                cache.delete(f'{username}_otp')
+                return HttpResponse('password is changed')
+            else:
+                return HttpResponse('Invalid OTP')
+    #GENERATE OTP
+    otp=random.randint(100000,999999)
+    cache.set(f'{UO.username}_otp',otp,timeout=300)
+    send_mail(
+                'Reset Password OTP',
+                f'Your OTP is {otp}',
+                'from@example.com',
+                [UO.email],
+                fail_silently=False,
+            )
+    request.session['username']=username    
     return render(request,'change_password.html')
 
 #reset password
 
 def reset_pw(request):
-    if request.method=='POST':
-        pw=request.POST['pw']
-        username=request.POST['un']
-        LUO=User.objects.filter(username=username)
-        if LUO:
-            UO=LUO[0]
-            UO.set_password(pw)
-            UO.save()
-            return HttpResponse('Rest password is done successfully')
+    if request.method == 'POST':
+        username = request.POST.get('un')
+        LUO = User.objects.filter(username=username)
+        if LUO.exists():
+            UO = LUO.first()
+            
+            otp = random.randint(100000, 999999)
+            cache.set(f'{username}_otp', otp, timeout=300)
+            
+            send_mail(
+                'Reset Password OTP',
+                f'Your OTP is {otp}',
+                'from@example.com',
+                [UO.email],
+                fail_silently=False,
+            )
+            request.session['username'] = username
+            return HttpResponseRedirect(reverse('verify_otp'))
         else:
-            return HttpResponse('User is not present')
-    return render(request,'reset_pw.html')
+            return HttpResponse('User not found')
+    return render(request, 'reset_pw.html')
 
+    # if request.method=='POST':
+    #     un=request.POST['un']
+    #     pw=request.POST['pw']
+
+    #     LUO=User.objects.filter(username=un)
+
+    #     if LUO:
+    #         UO=LUO[0]
+    #         UO.set_password(pw)
+    #         UO.save()
+    #         return HttpResponse('password reset is done')
+    #     else:
+    #         return HttpResponse('user is not present in my DB')
+    # return render(request,'reset_password.html')
+
+def verify_otp(request):
+    if request.method == 'POST':
+        otp_entered = request.POST.get('otp')
+        username = request.session.get('username')
+        
+        if not username:
+            return HttpResponse('Session expired. Please try again.')
+        
+        otp_stored = cache.get(f'{username}_otp')
+
+        if otp_stored and str(otp_stored) == otp_entered:
+            return HttpResponseRedirect(reverse('set_new_password'))
+        else:
+            return HttpResponse('Invalid OTP')
+    return render(request, 'verify_otp.html')
+
+
+def set_new_password(request):
+    if request.method == 'POST':
+        new_password = request.POST.get('new_password')
+        confirm_password = request.POST.get('confirm_password')
+        username = request.session.get('username')
+
+        if new_password and confirm_password and new_password == confirm_password:
+            user = User.objects.get(username=username)
+            user.set_password(new_password)
+            user.save()
+            return HttpResponse('Password reset successful')
+        else:
+            return HttpResponse('Passwords do not match')
+    return render(request, 'set_new_password.html')
